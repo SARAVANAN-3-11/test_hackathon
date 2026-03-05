@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CO(DE) PIOLET</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+body{ background:#020617; color:#00ffbf; font-family: Consolas, monospace; }
+.bg-white{ background:#020617 !important; }
+.shadow-lg{ background:#020617; border:1px solid #00ffbf; box-shadow:0 0 20px rgba(0,255,191,0.3); transition:0.3s; }
+.shadow-lg:hover{ box-shadow:0 0 40px rgba(0,255,191,0.8); transform:translateY(-8px); }
+.metric-card:hover{ background:#00ffbf !important; color:#020617 !important; box-shadow:0 0 30px #00ffbf !important; transform:scale(1.05); }
+h1{ color:#00ffbf; text-shadow:0 0 20px #00ffbf; letter-spacing:3px; font-size:2.5rem; }
+#scoreNum{ color:#00ffbf; font-size:4rem; text-shadow:0 0 30px #00ffbf; font-weight:900; }
+.grid div{ background:#030712; border:1px solid #00ffbf; padding:12px; border-radius:8px; text-align:center; transition:0.4s; font-weight:600; color:#00ffbf; }
+.grid div:hover{ background:#00ffbf; color:#020617; box-shadow:0 0 25px #00ffbf; transform:scale(1.05); }
+.issue{ background:#111827; border-left:4px solid #ff6b6b; padding:15px; margin-bottom:12px; border-radius:8px; color:#00ffbf; transition:0.3s; }
+.issue:hover{ box-shadow:0 0 20px rgba(0,255,191,0.5); transform:translateX(5px); }
+.issue.good{ border-left-color:#00ffbf; background:#0a1a0a; }
+.language-selector{ background:linear-gradient(45deg, #00ffbf, #00d9a3) !important; color:#020617 !important; font-weight:bold; border:2px solid #00ffbf !important; }
+.language-selector option{ background:#020617 !important; color:#00ffbf !important; }
+textarea{ width:100%; background:#000000; color:#00ffbf; font-family:Consolas,monospace; font-size:16px; line-height:1.7; padding:20px; border-radius:12px; border:2px solid #00ffbf; caret-color:#00ffbf; box-shadow:0 0 25px rgba(0,255,191,0.6); transition:0.4s; resize:vertical; }
+textarea:focus{ outline:none; box-shadow:0 0 40px rgba(0,255,191,1); border-color:#00ffbf; }
+button{ background:linear-gradient(45deg, #00ffbf, #00d9a3); color:#020617; border:none; padding:15px 35px; border-radius:12px; font-weight:900; font-size:1.1rem; transition:0.4s; box-shadow:0 0 20px rgba(0,255,191,0.4); }
+button:hover:not(:disabled){ background:linear-gradient(45deg, #00d9a3, #00ffbf); box-shadow:0 0 35px #00ffbf; transform:scale(1.08); }
+button:disabled{ opacity:0.7; cursor:not-allowed; }
+.score-ring{ width:200px; height:200px; border-radius:50%; background:conic-gradient(#00ffbf 0deg, #00ffbf var(--score), #111827 var(--score)); display:flex; align-items:center; justify-content:center; margin:0 auto 20px; box-shadow:0 0 40px rgba(0,255,191,0.6); transition:all 1s ease; }
+.status-badge{ background:linear-gradient(45deg, #00ffbf, #00d9a3); color:#020617; padding:8px 20px; border-radius:25px; font-weight:bold; box-shadow:0 0 15px rgba(0,255,191,0.5); }
+.loading{ opacity:0.7; pointer-events:none; }
+.grid-item{ min-height:80px; display:flex; flex-direction:column; justify-content:center; align-items:center; }
+.save-btn{ background:linear-gradient(45deg, #ff6b6b, #ff5252) !important; }
+</style>
+</head>
+<body class="p-12">
+<div class="max-w-7xl mx-auto">
+<h1 class="text-center mb-12">CO(DE) PIOLET</h1>
+
+<!-- Language Selector -->
+<div class="shadow-lg p-8 rounded-xl mb-8 text-center">
+    <label class="text-xl font-bold mr-6">🌐 Language:</label>
+    <select id="languageSelect" class="language-selector px-10 py-4 rounded-xl text-lg">
+        <option value="python">🐍 Python</option>
+        <option value="java" selected>☕ Java</option>
+        <option value="javascript">⚡ JavaScript</option>
+        <option value="cpp">⚙️ C++</option>
+        <option value="csharp">🔷 C#</option>
+        <option value="go">🐹 Go</option>
+        <option value="rust">🦀 Rust</option>
+    </select>
+</div>
+
+<!-- Score & Metrics -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+    <div class="shadow-lg p-8 rounded-xl text-center lg:col-span-1">
+        <div class="score-ring" id="scoreRing" style="--score: 98%;"><span id="scoreNum" class="text-4xl font-black">98</span>%</div>
+        <h2 class="text-2xl font-bold mb-4">CODE QUALITY</h2>
+        <div class="status-badge inline-block mb-6" id="statusBadge">🏆 PERFECT</div>
+        <div class="text-sm opacity-80">vs Last: <span class="font-bold text-lg" id="scoreChange">+20</span></div>
+    </div>
+
+    <div class="lg:col-span-2 grid grid-cols-2 lg:grid-cols-3 gap-6">
+        <div id="bugsCard" class="grid-item shadow-lg p-6 rounded-xl metric-card">
+            <i class="fas fa-bug text-2xl mb-2"></i><div class="text-2xl font-bold" id="bugs">0</div><div class="text-xs uppercase">BUGS</div>
+        </div>
+        <div id="styleCard" class="grid-item shadow-lg p-6 rounded-xl metric-card">
+            <i class="fas fa-paint-brush text-2xl mb-2"></i><div class="text-2xl font-bold" id="style">0</div><div class="text-xs uppercase">STYLE</div>
+        </div>
+        <div id="securityCard" class="grid-item shadow-lg p-6 rounded-xl metric-card">
+            <i class="fas fa-shield-alt text-2xl mb-2"></i><div class="text-2xl font-bold" id="security">0</div><div class="text-xs uppercase">SECURITY</div>
+        </div>
+        <div id="complexityCard" class="grid-item shadow-lg p-6 rounded-xl metric-card">
+            <i class="fas fa-brain text-2xl mb-2"></i><div class="text-2xl font-bold" id="complexity">1.4</div><div class="text-xs uppercase">COMPLEXITY</div>
+        </div>
+        <div id="dupeCard" class="grid-item shadow-lg p-6 rounded-xl metric-card">
+            <i class="fas fa-copy text-2xl mb-2"></i><div class="text-2xl font-bold" id="dupe">0%</div><div class="text-xs uppercase">DUPE</div>
+        </div>
+        <div id="maintainCard" class="grid-item shadow-lg p-6 rounded-xl metric-card">
+            <i class="fas fa-tools text-2xl mb-2"></i><div class="text-2xl font-bold" id="maintain">A+</div><div class="text-xs uppercase">QUALITY</div>
+        </div>
+    </div>
+</div>
+
+<!-- Issues -->
+<div class="shadow-lg p-8 rounded-xl mb-8">
+    <h3 class="text-2xl font-bold mb-6 flex items-center"><i class="fas fa-check-circle mr-3 text-xl text-green-400"></i>CODE ANALYSIS:</h3>
+    <div id="issuesList" class="space-y-3 max-h-72 overflow-y-auto pr-4"></div>
+</div>
+
+<!-- Code Editor -->
+<div class="shadow-lg p-8 rounded-xl">
+    <h3 class="text-2xl font-bold mb-8 flex items-center"><i class="fas fa-edit mr-3 text-xl"></i>CODE EDITOR:</h3>
+    <textarea id="codeInput" rows="20">import java.util.HashMap;
+
+public class TwoSum {
+    public static void main(String[] args) {
+        int[] nums = {2, 7, 11, 15};
+        int target = 9;
+
+        HashMap<Integer, Integer> map = new HashMap<>();
+
+        for (int i = 0; i < nums.length; i++) {
+            int complement = target - nums[i];
+
+            if (map.containsKey(complement)) {
+                System.out.println("Indices: " + map.get(complement) + " , " + i);
+                return;
+            }
+
+            map.put(nums[i], i);
+        }
+
+        System.out.println("No two numbers found.");
+    }
+}</textarea>
+    <div class="flex gap-4 mt-8">
+        <button id="analyzeBtn" class="flex-1 text-xl py-4">
+            <i class="fas fa-search mr-3"></i>🔍 ANALYZE CODE
+        </button>
+        <button id="clearBtn" class="px-8 py-4 text-lg">🗑️ CLEAR</button>
+        <button id="saveBtn" class="px-8 py-4 text-lg save-btn">
+            <i class="fas fa-save mr-2"></i>SAVE
+        </button>
+    </div>
+    <div id="status" class="mt-6 text-lg font-semibold flex items-center gap-3"></div>
+</div>
+
+<!-- Save Modal -->
+<div id="saveModal" class="fixed inset-0 bg-black bg-opacity-75 hidden flex items-center justify-center z-50 p-8">
+    <div class="shadow-lg bg-gray-900 border-2 border-cyan-500 rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-cyan-400">💾 SAVED ANALYSES</h2>
+            <button id="closeModal" class="text-3xl hover:text-cyan-400">&times;</button>
+        </div>
+        <div id="savedList" class="space-y-4 mb-8 max-h-64 overflow-y-auto"></div>
+        <button id="clearAllBtn" class="w-full py-4 px-8 bg-red-600 hover:bg-red-500 text-xl font-bold rounded-xl">🗑️ CLEAR ALL</button>
+    </div>
+</div>
+</div>
+
+<script>
+// ULTRA-SENSITIVE ANALYSIS ENGINE - Detects EVERY tiny error
+const rules = {
+    java: {
+        bugs: [
+            {pattern: /System\.out[^;]*$/, msg: 'Missing semicolon after System.out'},
+            {pattern: /return\s+[^;]*$/, msg: 'Missing semicolon after return'},
+            {pattern: /=\s*[^;]*$/, msg: 'Missing semicolon after assignment'},
+            {pattern: /\bif\s*\([^)]*\)\s*[^ {]/, msg: 'Missing braces after if statement'},
+            {pattern: /\bfor\s*\([^)]*\)\s*[^ {]/, msg: 'Missing braces after for loop'},
+            {pattern: /public\s+(class|interface)\s+\w+[^ {]/, msg: 'Missing opening brace after class/interface'},
+            {pattern: /catch\s*\([^)]*\)\s*[^ {]/, msg: 'Missing braces after catch block'}
+        ],
+        style: [
+            {pattern: /^.{101,}$/m, msg: 'Line too long (>100 chars)'},
+            {pattern: /TODO|FIXME/i, msg: 'Remove TODO/FIXME comments'},
+            {pattern: /[A-Z]{4,}/, msg: 'Use camelCase - avoid SCREAMING_SNAKE_CASE'},
+            {pattern: / {5,}/, msg: 'Too many spaces (use 2-4)'},
+            {pattern: /\b(int|float|double|String)\s+\w+\s*=\s*\w+[^;]/, msg: 'Missing semicolon after variable declaration'},
+            {pattern: /public static void main/, msg: 'Consider extracting main logic to separate method'}
+        ],
+        security: [
+            {pattern: /(exec|Runtime\.getRuntime)/i, msg: 'Dangerous system execution'},
+            {pattern: /System\.(exit|arraycopy)/, msg: 'Avoid System.exit() in production'},
+            {pattern: /new\s+(File|Scanner)\(/, msg: 'File operations - validate inputs'}
+        ]
+    },
+    python: {
+        bugs: [
+            {pattern: /print\s*\([^)]*$/m, msg: 'Unclosed print() call'},
+            {pattern: /def\s+\w+\s*:/, msg: 'Missing indentation after def'},
+            {pattern: /:\s*$/m, msg: 'Missing indentation after colon (:)'}
+        ],
+        style: [
+            {pattern: /^.{81,}$/m, msg: 'Line too long (PEP8: max 79 chars)'},
+            {pattern: / {5,}/, msg: 'Use 4 spaces indentation (PEP8)'},
+            {pattern: /print\s*\(/, msg: 'Use f-strings instead of format()'}
+        ],
+        security: [
+            {pattern: /(exec|eval)\(/i, msg: 'DANGEROUS: exec() and eval()'},
+            {pattern: /input\s*\(/, msg: 'Sanitize user input'}
+        ]
+    },
+    javascript: {
+        bugs: [
+            {pattern: /console\.log\s*\([^)]*$/m, msg: 'Unclosed console.log()'},
+            {pattern: /function\s+\w+\s*\([^)]*\)\s*[^ {]/, msg: 'Missing braces after function'}
+        ],
+        style: [
+            {pattern: /^.{101,}$/m, msg: 'Line too long (>100 chars)'},
+            {pattern: /var\s+/, msg: 'Use const/let instead of var'},
+            {pattern: /function\s+\w+\s*\(/, msg: 'Use arrow functions or const fn'}
+        ]
+    }
+};
+
+let savedAnalyses = JSON.parse(localStorage.getItem('codeAnalyses') || '[]');
+
+function analyzeCode(code, language = 'java') {
+    const lines = code.split('\n');
+    let bugs = 0, style = 0, security = 0, issues = [];
+    let complexity = 1.0;
+    
+    // ULTRA-SENSITIVE complexity calculation
+    const controlFlow = language === 'java' ? [/if\s*\(/, /for\s*\(/, /while\s*\(/, /switch\s*\(/, /catch\s*\(/] : 
+                      language === 'python' ? [/if |for |while|def |try:/] : [/if\s*\(/, /for\s*\(/];
+    lines.forEach(line => controlFlow.forEach(p => { if (p.test(line)) complexity += 0.4; }));
+    
+    // HYPER-SENSITIVE ERROR DETECTION
+    const langRules = rules[language] || rules.java;
+    lines.forEach((line, i) => {
+        const l = line.trim(), lineNum = i + 1;
+        
+        // BUGS - Every syntax error
+        langRules.bugs.forEach(rule => {
+            if (rule.pattern.test(l)) {
+                bugs++;
+                issues.push(`Line ${lineNum}: 🐛 ${rule.msg}`);
+            }
+        });
+        
+        // STYLE - Every formatting issue
+        langRules.style.forEach(rule => {
+            if (rule.pattern.test(l)) {
+                style++;
+                issues.push(`Line ${lineNum}: ✨ ${rule.msg}`);
+            }
+        });
+        
+        // SECURITY - Every potential vulnerability
+        langRules.security?.forEach(rule => {
+            if (rule.pattern.test(l)) {
+                security++;
+                issues.push(`Line ${lineNum}: 🚨 ${rule.msg}`);
+            }
+        });
+        
+        // EXTRA HYPER-SENSITIVE CHECKS
+        if (language === 'java' && l.includes('=') && !l.includes(';') && !l.includes('return') && l.includes('int|float|double')) {
+            style++;
+            issues.push(`Line ${lineNum}: ⚠️ Missing semicolon after declaration`);
+        }
+        
+        if (language === 'python' && l.includes('=') && !l.match(/^\s{4,}/)) {
+            style++;
+            issues.push(`Line ${lineNum}: ⚠️ Missing 4-space indentation`);
+        }
+    });
+    
+    complexity = Math.max(1.0, parseFloat((complexity / 2.2).toFixed(1)));
+    const duplication = lines.filter(l => lines.filter(l2 => l2.trim() === l.trim()).length > 2).length * 0.5;
+    
+    const score = Math.max(0, 100 - bugs*22 - style*7 - security*40 - (complexity-1)*12 - duplication);
+    
+    return {
+        score: Math.round(score),
+        bugs, style, security, complexity, duplication: Math.min(duplication, 15),
+        maintainability: score >= 95 ? 'A+' : score >= 85 ? 'A' : score >= 75 ? 'B' : 'C',
+        issues: issues.length ? issues.slice(0, 12) : ['✅ NO ISSUES FOUND - Production Ready Code!'],
+        language, timestamp: new Date().toLocaleString()
+    };
+}
+
+function updateResults(data) {
+    document.getElementById('scoreNum').textContent = data.score;
+    document.getElementById('bugs').textContent = data.bugs;
+    document.getElementById('style').textContent = data.style;
+    document.getElementById('security').textContent = data.security;
+    document.getElementById('complexity').textContent = data.complexity;
+    document.getElementById('dupe').textContent = data.duplication.toFixed(1) + '%';
+    document.getElementById('maintain').textContent = data.maintainability;
+    
+    document.getElementById('scoreRing').style.setProperty('--score', data.score + '%');
+    document.getElementById('statusBadge').textContent = data.score >= 95 ? '🏆 PERFECT' : data.score >= 85 ? '✅ EXCELLENT' : data.score >= 70 ? '⚠️ GOOD' : '❌ NEEDS WORK';
+    
+    const list = document.getElementById('issuesList');
+    if (data.issues[0].includes('NO ISSUES')) {
+        list.innerHTML = `<div class="issue good text-center py-12 text-xl">
+            <i class="fas fa-check-circle text-5xl mb-4 text-green-400"></i>
+            <div class="font-bold text-2xl">${data.issues[0]}</div>
+        </div>`;
+    } else {
+        list.innerHTML = data.issues.map(issue => `<div class="issue">${issue}</div>`).join('');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateResults({
+        score: 98, bugs: 0, style: 0, security: 0, complexity: 1.4, duplication: 0, 
+        maintainability: 'A+', issues: ['✅ NO ISSUES FOUND - Production Ready Code!']
+    });
+    
+    document.getElementById('analyzeBtn').onclick = function() {
+        if (isAnalyzing) return;
+        
+        const btn = this;
+        const code = document.getElementById('codeInput').value.trim();
+        const language = document.getElementById('languageSelect').value;
+        
+        if (!code) {
+            document.getElementById('status').innerHTML = '❌ <i class="fas fa-exclamation-triangle mr-2"></i>Paste code first!';
+            return;
+        }
+        
+        isAnalyzing = true;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-3"></i>ANALYZING...';
+        document.body.classList.add('loading');
+        document.getElementById('status').innerHTML = '<i class="fas fa-cog fa-spin mr-2"></i>Deep scan running...';
+        
+        setTimeout(() => {
+            const results = analyzeCode(code, language);
+            updateResults(results);
+            document.getElementById('status').innerHTML = 
+                `✅ <i class="fas fa-check-circle mr-2"></i>Complete! ${results.language.toUpperCase()} | ${results.score}% Quality`;
+            
+            isAnalyzing = false;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-search mr-3"></i>🔍 ANALYZE AGAIN';
+            document.body.classList.remove('loading');
+        }, 1500);
+    };
+    
+    document.getElementById('saveBtn').onclick = () => {
+        const code = document.getElementById('codeInput').value.trim();
+        if (!code) return document.getElementById('status').innerHTML = '❌ Analyze first!';
+        
+        const results = analyzeCode(code, document.getElementById('languageSelect').value);
+        const analysis = {id: Date.now(), code: code.slice(0, 100) + '...', ...results};
+        savedAnalyses.unshift(analysis);
+        localStorage.setItem('codeAnalyses', JSON.stringify(savedAnalyses.slice(0, 20)));
+        document.getElementById('status').innerHTML = '💾 Saved to local storage! (SQLite-like)';
+        showSavedModal();
+    };
+    
+    document.getElementById('clearBtn').onclick = () => {
+        document.getElementById('codeInput').value = '';
+        document.getElementById('status').innerHTML = '🧹 Code cleared - ready to analyze!';
+    };
+    
+    document.getElementById('closeModal').onclick = () => document.getElementById('saveModal').classList.add('hidden');
+    
+    document.getElementById('clearAllBtn').onclick = () => {
+        savedAnalyses = [];
+        localStorage.removeItem('codeAnalyses');
+        document.getElementById('savedList').innerHTML = '<div class="text-center py-8 text-lg opacity-75">No saved analyses</div>';
+    };
+    
+    window.loadSaved = (id) => {
+        const analysis = savedAnalyses.find(a => a.id === id);
+        if (analysis) {
+            document.getElementById('codeInput').value = analysis.code.includes('...') ? 
+                prompt('Enter full code:') || analysis.code : analysis.code;
+            updateResults(analysis);
+            document.getElementById('saveModal').classList.add('hidden');
+        }
+    };
+    
+    function showSavedModal() {
+        document.getElementById('saveModal').classList.remove('hidden');
+        const list = document.getElementById('savedList');
+        list.innerHTML = savedAnalyses.map(a => `
+            <div class="shadow-lg p-6 rounded-xl cursor-pointer hover:bg-cyan-900/30 mb-3" onclick="loadSaved(${a.id})">
+                <div class="flex justify-between">
+                    <span class="text-2xl font-bold">${a.score}%</span>
+                    <span class="text-sm opacity-75">${a.language.toUpperCase()}</span>
+                </div>
+                <div class="text-sm opacity-90">${a.code}</div>
+            </div>
+        `).join('') || '<div class="text-center py-12 text-lg opacity-75">No saved analyses</div>';
+    }
+});
+let isAnalyzing = false;
+</script>
+</body>
+</html>
